@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn OAuth Redirect</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status {
+            font-size: 16px;
+            margin-top: 20px;
+            opacity: 0.9;
+        }
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .success {
+            background: rgba(0, 255, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .code-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LinkedIn Authentication</h1>
+        <div class="spinner" id="spinner"></div>
+        <div class="status" id="status">Redirecting to app...</div>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        const state = urlParams.get('state');
+
+        const statusEl = document.getElementById('status');
+        const messageEl = document.getElementById('message');
+        const spinnerEl = document.getElementById('spinner');
+
+        if (error) {
+            // Handle error
+            spinnerEl.style.display = 'none';
+            statusEl.textContent = 'Authentication Error';
+            messageEl.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${error}<br>
+                    ${errorDescription ? `<strong>Description:</strong> ${errorDescription}` : ''}
+                </div>
+            `;
+        } else if (code) {
+            // Success - redirect to app with custom URL scheme
+            const appUrl = `linkedincontent://callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+
+            statusEl.textContent = 'Authentication successful!';
+            messageEl.innerHTML = `
+                <div class="success">
+                    Authorization code received. Redirecting to app...
+                </div>
+            `;
+
+            // Try to redirect to app
+            setTimeout(() => {
+                window.location.href = appUrl;
+
+                // After attempting redirect, show fallback message
+                setTimeout(() => {
+                    spinnerEl.style.display = 'none';
+                    statusEl.textContent = 'If the app didn\'t open automatically...';
+                    messageEl.innerHTML = `
+                        <div class="success">
+                            <p>Your authorization was successful!</p>
+                            <p>If the app didn't open automatically, please tap the button below:</p>
+                            <br>
+                            <a href="${appUrl}" style="display: inline-block; background: white; color: #667eea; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                                Open App
+                            </a>
+                        </div>
+                        <div class="code-display">
+                            <strong>Authorization Code:</strong><br>
+                            ${code}
+                        </div>
+                    `;
+                }, 2000);
+            }, 500);
+        } else {
+            // No code or error - invalid callback
+            spinnerEl.style.display = 'none';
+            statusEl.textContent = 'Invalid Callback';
+            messageEl.innerHTML = `
+                <div class="error">
+                    No authorization code received. Please try again.
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
