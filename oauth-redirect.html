@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkedIn OAuth Redirect</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             display: flex;
@@ -12,139 +13,127 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0077b5 0%, #00a0dc 100%);
             color: white;
-            text-align: center;
             padding: 20px;
         }
         .container {
-            max-width: 500px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            max-width: 560px;
+            width: 100%;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(12px);
             padding: 40px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
         }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
+        h1 { font-size: 22px; margin: 0 0 8px; }
+        .subtitle { opacity: 0.75; font-size: 14px; margin-bottom: 28px; }
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 24px;
         }
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .status {
-            font-size: 16px;
-            margin-top: 20px;
-            opacity: 0.9;
-        }
-        .error {
-            background: rgba(255, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        .success {
-            background: rgba(0, 255, 0, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        .code-display {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
+        .badge.success { background: rgba(0,200,100,0.25); border: 1px solid rgba(0,200,100,0.5); }
+        .badge.error   { background: rgba(255,80,80,0.25);  border: 1px solid rgba(255,80,80,0.5); }
+        .code-box {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
             word-break: break-all;
-            font-family: monospace;
-            font-size: 14px;
+            text-align: left;
+            line-height: 1.5;
+            margin: 16px 0;
+            max-height: 120px;
+            overflow-y: auto;
+            color: #e0f0ff;
+        }
+        .copy-btn {
+            background: white;
+            color: #0077b5;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.1s;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .copy-btn:hover { opacity: 0.9; }
+        .copy-btn:active { transform: scale(0.98); }
+        .copy-btn.copied { background: #00c864; color: white; }
+        .instruction {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-top: 16px;
+            line-height: 1.5;
+        }
+        .error-detail {
+            background: rgba(255,80,80,0.15);
+            border: 1px solid rgba(255,80,80,0.3);
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 13px;
+            line-height: 1.6;
+            text-align: left;
+            margin-top: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>LinkedIn Authentication</h1>
-        <div class="spinner" id="spinner"></div>
-        <div class="status" id="status">Redirecting to app...</div>
-        <div id="message"></div>
-    </div>
+<div class="container">
+    <h1>LinkedIn OAuth</h1>
+    <div class="subtitle" id="subtitle"></div>
+    <div id="content"></div>
+</div>
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const code  = params.get('code');
+    const error = params.get('error');
+    const errorDesc = params.get('error_description');
+    const sub   = document.getElementById('subtitle');
+    const cont  = document.getElementById('content');
 
-    <script>
-        // Parse URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const error = urlParams.get('error');
-        const errorDescription = urlParams.get('error_description');
-        const state = urlParams.get('state');
+    if (code) {
+        sub.textContent = 'Authorization successful — copy the code below';
+        cont.innerHTML = `
+            <div class="badge success">Authorization Code Ready</div>
+            <div class="code-box" id="code-text">${code}</div>
+            <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+            <div class="instruction">Paste this code into the terminal prompt<br>running <code>python get_linkedin_credentials.py</code></div>
+        `;
+    } else if (error) {
+        sub.textContent = 'Authorization failed';
+        cont.innerHTML = `
+            <div class="badge error">Error: ${error}</div>
+            <div class="error-detail">
+                <strong>Details:</strong><br>
+                ${errorDesc ? errorDesc.replace(/\+/g,' ').replace(/%22/g,'"') : 'No description provided'}
+            </div>
+            <div class="instruction" style="margin-top:20px">Check your LinkedIn app's approved scopes,<br>then retry the authorization flow.</div>
+        `;
+    } else {
+        sub.textContent = 'No parameters received';
+        cont.innerHTML = `<div class="instruction">This page is used as the OAuth redirect URI.<br>Navigate here via the LinkedIn authorization flow.</div>`;
+    }
 
-        const statusEl = document.getElementById('status');
-        const messageEl = document.getElementById('message');
-        const spinnerEl = document.getElementById('spinner');
-
-        if (error) {
-            // Handle error
-            spinnerEl.style.display = 'none';
-            statusEl.textContent = 'Authentication Error';
-            messageEl.innerHTML = `
-                <div class="error">
-                    <strong>Error:</strong> ${error}<br>
-                    ${errorDescription ? `<strong>Description:</strong> ${errorDescription}` : ''}
-                </div>
-            `;
-        } else if (code) {
-            // Success - redirect to app with custom URL scheme
-            const appUrl = `linkedincontent://callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
-
-            statusEl.textContent = 'Authentication successful!';
-            messageEl.innerHTML = `
-                <div class="success">
-                    Authorization code received. Redirecting to app...
-                </div>
-            `;
-
-            // Try to redirect to app
-            setTimeout(() => {
-                window.location.href = appUrl;
-
-                // After attempting redirect, show fallback message
-                setTimeout(() => {
-                    spinnerEl.style.display = 'none';
-                    statusEl.textContent = 'If the app didn\'t open automatically...';
-                    messageEl.innerHTML = `
-                        <div class="success">
-                            <p>Your authorization was successful!</p>
-                            <p>If the app didn't open automatically, please tap the button below:</p>
-                            <br>
-                            <a href="${appUrl}" style="display: inline-block; background: white; color: #667eea; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                                Open App
-                            </a>
-                        </div>
-                        <div class="code-display">
-                            <strong>Authorization Code:</strong><br>
-                            ${code}
-                        </div>
-                    `;
-                }, 2000);
-            }, 500);
-        } else {
-            // No code or error - invalid callback
-            spinnerEl.style.display = 'none';
-            statusEl.textContent = 'Invalid Callback';
-            messageEl.innerHTML = `
-                <div class="error">
-                    No authorization code received. Please try again.
-                </div>
-            `;
-        }
-    </script>
+    function copyCode() {
+        const code = document.getElementById('code-text').textContent.trim();
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copy Code'; btn.classList.remove('copied'); }, 2000);
+        });
+    }
+</script>
 </body>
 </html>
